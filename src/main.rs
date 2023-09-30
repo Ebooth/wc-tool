@@ -18,12 +18,16 @@ struct Args {
 
     #[arg(short)]
     m: bool,
+
+    #[arg(short)]
+    w: bool,
 }
 
 struct WcResult {
     file: String,
     bytes: Option<usize>,
     lines: Option<usize>,
+    words: Option<usize>,
     chars: Option<usize>,
 }
 
@@ -33,6 +37,7 @@ impl WcResult {
             file,
             bytes: None,
             lines: None,
+            words: None,
             chars: None,
         }
     }
@@ -40,7 +45,7 @@ impl WcResult {
 
 impl fmt::Display for WcResult {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let fields = [self.bytes, self.lines, self.chars]
+        let fields = [self.bytes, self.lines, self.chars, self.words]
             .iter()
             .filter_map(|&x| x)
             .map(|x| x.to_string())
@@ -64,6 +69,14 @@ fn main() {
     if args.l {
         let number_of_lines = string_content.split("\n").count();
         wc_result.lines = Some(number_of_lines);
+    }
+    if args.w {
+        let number_of_lines = string_content.split("\n").count();
+        wc_result.lines = Some(number_of_lines);
+    }
+    if args.m {
+        let number_of_words = string_content.split_whitespace().count();
+        wc_result.words = Some(number_of_words);
     }
     if args.m {
         let number_of_chars = string_content.chars().count();
