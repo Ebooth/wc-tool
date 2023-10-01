@@ -4,23 +4,29 @@ use std::fs;
 
 #[derive(Parser, Debug)]
 #[command(name = "cwc")]
-#[command(author = "Ebooth <pauldejendev@gmail.com>")]
+#[command(author = "Ebooth <pauldejeandev@gmail.com>")]
 #[command(version = "1.0")]
 #[command(about = "A copy of unix command line tool wc ", long_about = None)]
+
 struct Args {
     file: String,
 
-    #[arg(short)]
-    c: bool,
+    /// The number of bytes in each input file is written to the standard output.
+    #[arg(short = 'c', group = "byte_count")]
+    bytes: bool,
 
-    #[arg(short)]
-    l: bool,
+    /// The number of lines in each input file is written to the standard output.
+    #[arg(short = 'l')]
+    lines: bool,
 
-    #[arg(short)]
-    m: bool,
+    /// The number of characters in each input file is written to the standard output.  
+    /// If the current locale does not support multibyte characters, this is equivalent to the -c option.
+    #[arg(short = 'm', group = "byte_count")]
+    chars: bool,
 
-    #[arg(short)]
-    w: bool,
+    /// The number of words in each input file is written to the standard output.
+    #[arg(short = 'w')]
+    words: bool,
 }
 
 struct WcResult {
@@ -45,40 +51,45 @@ impl WcResult {
 
 impl fmt::Display for WcResult {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let fields = [self.bytes, self.lines, self.chars, self.words]
+        let fields = [self.lines, self.words, self.bytes, self.chars]
             .iter()
             .filter_map(|&x| x)
-            .map(|x| x.to_string())
-            .collect::<Vec<_>>();
-        write!(f, "{} {}", fields.join(" "), self.file)
+            .map(|x| format!("{x:8}"))
+            .collect::<String>();
+        write!(f, "{} {}", fields, self.file)
     }
 }
 
 fn main() {
-    let args = Args::parse();
+    let mut args = Args::parse();
     let file = &args.file;
+
+    if [args.bytes, args.chars, args.lines, args.words]
+        .iter()
+        .all(|&x| !x)
+    {
+        args.bytes = true;
+        args.lines = true;
+        args.words = true;
+    }
 
     let mut wc_result = WcResult::new(file.to_owned());
 
     let content = fs::read(file).expect(format!("{} not found ", file).as_str());
-    if args.c {
+    if args.bytes {
         wc_result.bytes = Some(content.len());
     };
     let string_content = String::from_utf8(content).unwrap();
 
-    if args.l {
+    if args.lines {
         let number_of_lines = string_content.split("\n").count();
         wc_result.lines = Some(number_of_lines);
     }
-    if args.w {
-        let number_of_lines = string_content.split("\n").count();
-        wc_result.lines = Some(number_of_lines);
-    }
-    if args.m {
+    if args.words {
         let number_of_words = string_content.split_whitespace().count();
         wc_result.words = Some(number_of_words);
     }
-    if args.m {
+    if args.chars {
         let number_of_chars = string_content.chars().count();
         wc_result.chars = Some(number_of_chars);
     }
