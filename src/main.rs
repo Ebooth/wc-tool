@@ -1,7 +1,8 @@
 use clap::Parser;
 use std::fmt;
 use std::fs;
-
+use std::io;
+use std::io::BufRead;
 #[derive(Parser, Debug)]
 #[command(name = "cwc")]
 #[command(author = "Ebooth <pauldejeandev@gmail.com>")]
@@ -38,9 +39,9 @@ struct WcResult {
 }
 
 impl WcResult {
-    fn new(file: String) -> WcResult {
+    fn new() -> WcResult {
         WcResult {
-            file,
+            file: String::new(),
             bytes: None,
             lines: None,
             words: None,
@@ -89,7 +90,11 @@ fn main() {
     }
 
     if files.is_empty() {
-        println!("error: no file specified");
+        let content = read_from_stdin();
+        let wc_result = process_content(content, &args);
+        if let Some(v) = wc_result {
+            println!("{}", v);
+        }
         return;
     }
 
@@ -98,10 +103,12 @@ fn main() {
         return;
     }
 
-    let mut total_result = WcResult::new("total".to_owned());
+    let mut total_result = WcResult::new();
+    total_result.file = "total".to_owned();
 
     for file in files {
         let result = process_file(file, &args);
+
         if let Some(v) = result {
             total_result.add(&v);
         }
@@ -109,9 +116,23 @@ fn main() {
     println!("{}", total_result);
 }
 
-fn process_file(file: &str, args: &Args) -> Option<WcResult> {
-    let mut wc_result = WcResult::new(file.to_owned());
+fn read_from_stdin() -> Vec<u8> {
+    let mut content: Vec<u8> = vec![];
+    let stdin = io::stdin();
 
+    let mut reader = stdin.lock();
+    let mut buffer = reader.fill_buf().unwrap();
+    while !buffer.is_empty() {
+        content.extend_from_slice(buffer);
+        let length = buffer.len();
+        reader.consume(length);
+        buffer = reader.fill_buf().unwrap();
+    }
+
+    return content;
+}
+
+fn process_file(file: &str, args: &Args) -> Option<WcResult> {
     let content = match fs::read(file) {
         Ok(val) => val,
         Err(_) => {
@@ -120,6 +141,17 @@ fn process_file(file: &str, args: &Args) -> Option<WcResult> {
         }
     };
 
+    let wc_result = process_content(content, args);
+    if let Some(mut v) = wc_result {
+        v.file = file.to_owned();
+        println!("{}", v);
+        return Some(v);
+    }
+    return None;
+}
+
+fn process_content(content: Vec<u8>, args: &Args) -> Option<WcResult> {
+    let mut wc_result = WcResult::new();
     if args.bytes {
         wc_result.bytes = Some(content.len());
     };
@@ -145,6 +177,5 @@ fn process_file(file: &str, args: &Args) -> Option<WcResult> {
         wc_result.chars = Some(number_of_chars);
     }
 
-    println!("{}", wc_result);
     return Some(wc_result);
 }
