@@ -133,7 +133,7 @@ fn process_file(file: &str, args: &Args) -> Option<WcResult> {
     };
 
     if args.lines {
-        let number_of_lines = string_content.split("\n").count();
+        let number_of_lines = string_content.matches("\n").count();
         wc_result.lines = Some(number_of_lines);
     }
     if args.words {
